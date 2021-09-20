@@ -145,7 +145,7 @@ namespace IO
             filasTextBox = Application.OpenForms["Form1"].Controls["filasTextBox"] as TextBox;
             columnasTextBox = Application.OpenForms["Form1"].Controls["columnasTextBox"] as TextBox;
             informationTextBox = Application.OpenForms["Form1"].Controls["informationTextBox"] as TextBox;
-            panel1 = Application.OpenForms["Form1"].Controls["panel1"] as Panel; 
+            panel1 = Application.OpenForms["Form1"].Controls["panel1"] as Panel;
             this.rows = rows;
             this.cols = cols;
             Matriz = new double[rows, cols];
@@ -251,7 +251,7 @@ namespace IO
                     copiaMatriz[y, f] = copiaMatriz[y, f] * (numerito);
                     MatrizIdentidad[y, f] = MatrizIdentidad[y, f] * (numerito);
                 }
-                
+
                 if (numerito % 1 != 0) {
                     Fraction fractionA = RealToFraction(numerito, maxRelativeError);
                     informationTextBox.AppendText(fractionA.N.ToString() + "/" + fractionA.D.ToString() + "f" + (y + 1).ToString());
@@ -268,7 +268,7 @@ namespace IO
             imprimirMatriz("Identidad");
         }
 
-        private void convertirCamposEnCeros(string tipo, ref double[,] copiaMatriz,ref double[,] MatrizIdentidad, ref int x, ref int y, ref int pivoteDiagonal)
+        private void convertirCamposEnCeros(string tipo, ref double[,] copiaMatriz, ref double[,] MatrizIdentidad, ref int x, ref int y, ref int pivoteDiagonal)
         {
             int valorCambiante = 0;
             int valorCambiante2 = 0;
@@ -301,7 +301,7 @@ namespace IO
 
                 double valor = copiaMatriz[valorCambiante2, x] * -1;
 
-                informationTextBox.AppendText(" " + valor.ToString() + "f" + (valorCambiante+1).ToString() + " + " + "f" + (y+1).ToString());
+                informationTextBox.AppendText(" " + valor.ToString() + "f" + (valorCambiante + 1).ToString() + " + " + "f" + (y + 1).ToString());
 
                 for (int f = 0; f < copiaMatriz.GetLength(1); f++)
                 {
@@ -328,7 +328,7 @@ namespace IO
             imprimirMatriz("Copia");
             imprimirMatriz("Identidad");
         }
-        
+
         public async Task<bool> calcularInveras()
         {
             ProgressBar pBar = new ProgressBar();
@@ -359,7 +359,7 @@ namespace IO
                         convertirCamposEnCeros("IniciaCero", ref copiaMatriz, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                     }
                     else if (copiaMatriz[y, x] == 1) {
-                        informationTextBox.AppendText(" Sin paso, valor 1 en (" + (x+1).ToString() + "," + (y+1).ToString() + ") ya existe");
+                        informationTextBox.AppendText(" Sin paso, valor 1 en (" + (x + 1).ToString() + "," + (y + 1).ToString() + ") ya existe");
                         pivoteDiagonal++;
                         y = -1;
                     }
@@ -376,7 +376,7 @@ namespace IO
                 {
                     convertirCamposEnCeros("CeroAbajo", ref copiaMatriz, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                 } else if (copiaMatriz[y, x] == 0) {
-                    informationTextBox.AppendText(" Sin paso, valor 0 en (" + (x+1).ToString() + "," + (y+1).ToString() + ") ya existe");
+                    informationTextBox.AppendText(" Sin paso, valor 0 en (" + (x + 1).ToString() + "," + (y + 1).ToString() + ") ya existe");
                 }
 
                 //avanzar por la matriz
@@ -392,7 +392,7 @@ namespace IO
                 }
 
                 drawMatrix();
-              
+
                 await PutTaskDelay();
 
                 if (y >= copiaMatriz.GetLength(1))
@@ -401,7 +401,57 @@ namespace IO
                     return true;
                 }
             }
-            return false;
+        }
+        public double[,] calcularInversa(double[,] matrix)
+        {
+            int x = 0;
+            int y = 0;
+            int pivoteDiagonal = 0;
+            while (true)
+            {
+                if (x == y && y == pivoteDiagonal)
+                {
+                    if (matrix[y, x] == 0)
+                    {
+                        convertirCamposEnCeros("IniciaCero", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                    }
+                    else if (matrix[y, x] == 1)
+                    {
+                        pivoteDiagonal++;
+                        y = -1;
+                    }
+                    else
+                    {
+                        convertirCamposEnCeros("UnoDiagonal", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                    }
+                }
+                else if (matrix[y, x] != 0 && y >= pivoteDiagonal && y != x)
+                {
+                    convertirCamposEnCeros("CeroArriba", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                }
+                else if (matrix[y, x] != 0 && y <= pivoteDiagonal && y != x)
+                {
+                    convertirCamposEnCeros("CeroAbajo", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                }
+
+                //avanzar por la matriz
+                y++;
+                if (y == matrix.GetLength(1))
+                {
+                    y = pivoteDiagonal;
+                    x++;
+                }
+                else if (pivoteDiagonal != 0 && y == pivoteDiagonal - 1 && y < matrix.GetLength(1))
+                {
+                    y++;
+                }
+
+                if (y >= matrix.GetLength(1))
+                {
+                    break;
+                }
+            }
+            return matrix;
         }
         async Task PutTaskDelay()
         {
@@ -411,7 +461,7 @@ namespace IO
             int count = 0;
             string[] vector = new string[rows * cols];
             string[] vector2 = new string[rows * cols];
-            
+
             double num = 0.0;
             Fraction fraction;
             for (int i = 0; i < rows; i++)
@@ -458,10 +508,7 @@ namespace IO
                 {
                     textBox.Text = vector[count++];
                 }
-                
-
             }
-
         }
         public void initMatrix()
         {
@@ -491,7 +538,7 @@ namespace IO
                     if (i < matrixSize) {
                         strPunteroOriginal[i] = "Original" + (i + 1).ToString();
                         a.Name = strPunteroOriginal[i];
-                        a.Text = vec[i].ToString() ;
+                        a.Text = vec[i].ToString();
                         cellSize = 25;
                     } else if (i < matrixSize * 2) {
                         if (i == matrixSize) {
@@ -503,17 +550,17 @@ namespace IO
                     else if (i < matrixSize * 3) {
                         if (i == matrixSize * 2)
                         {
-                            pointX += 30/2;
+                            pointX += 30 / 2;
                             Pen blackpen = new Pen(Color.Black, 2);
                             Graphics g = panel1.CreateGraphics();
                             g.DrawLine(blackpen, pointX, 10, pointX, 150);
                             g.Dispose();
                             pointX += 30 / 2;
                         }
-                        strPunteroIdentidad[i - matrixSize*2] = "Identidad" + (i + 1).ToString();
+                        strPunteroIdentidad[i - matrixSize * 2] = "Identidad" + (i + 1).ToString();
                         a.Name = strPunteroIdentidad[i - matrixSize * 2];
                     }
-                   
+
                     a.Location = new Point(pointX, pointY);
                     a.Height = cellSize;
                     a.Width = cellSize;
@@ -534,6 +581,63 @@ namespace IO
             {
                 MessageBox.Show(e.ToString());
             }
+        }
+
+        public double[,] matrixMult(double[,] A, double[,] B) {
+            double[,] matrix;
+            //para verificar que una matriz sea multiplicable A.X == B.Y ej [2,2] * [2,1] donde [y,x] filas * columnas en ese orden
+            //el resultado es una matrix de los valres restantes ej [2,2] * [2,1] la nueva matriz seria [2,1]
+            //Nota: esta matriz no se puede multiplicar B * A
+            int a = A.GetLength(1);
+            int b = B.GetLength(0);
+            if (A.GetLength(1) == B.GetLength(0)) {
+                int aX = A.GetLength(0);
+                int aY = A.GetLength(1);
+                int bX = B.GetLength(0);
+                int bY = B.GetLength(1);
+                matrix = new double[aX, bY];
+
+                double temp = 0;
+                for (int i = 0; i < aX; i++)
+                {
+                    for (int j = 0; j < bY; j++)
+                    {
+                        temp = 0;
+                        for (int k = 0; k < aY; k++)
+                        {
+                            temp += A[i, k] * B[k, j];
+                        }
+                        matrix[i, j] = temp;
+                    }
+                }
+            }
+            else
+            {
+                return null;
+            }
+
+            return matrix;
+        }
+        public double[,] matrixMult(double[,] A, double[] B)
+        {
+            double[,] matrix = new double[B.Length,1];
+            int i = 0;
+            foreach (double value in B) {
+                matrix[i++,0] = value;
+            }
+            
+            return matrixMult(A,matrix);
+        }
+        public double[,] matrixMult(double[] A, double[,] B)
+        {
+            double[,] matrix = new double[1, A.Length];
+            int i = 0;
+            foreach (double value in A)
+            {
+                matrix[0, i++] = value;
+            }
+
+            return matrixMult(matrix, B);
         }
     }
 }

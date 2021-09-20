@@ -13,6 +13,7 @@ namespace IO
     public partial  class  Form1 : Form
     {
         Matrix matrix;
+        SimplexMethod sp;
         bool estado = false;
         //string[] strPutero;
         public Form1()
@@ -52,7 +53,11 @@ namespace IO
         }
         private void button1_Click_1(object sender, EventArgs e)
         {
-            _ = calcularInversa();
+            //_ = calcularInversa();
+            sp = new SimplexMethod();
+            Controls.Clear();
+            sp.init(2, 2);
+            sp.Print();
         }
     }
 }
