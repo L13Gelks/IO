@@ -140,7 +140,6 @@ namespace IO
                 }
             }
         }
-
         public Matrix(int rows, int cols) {
             filasTextBox = Application.OpenForms["Form1"].Controls["filasTextBox"] as TextBox;
             columnasTextBox = Application.OpenForms["Form1"].Controls["columnasTextBox"] as TextBox;
@@ -161,7 +160,6 @@ namespace IO
         {
             return cols;
         }
-
         public int getSize()
         {
             return cols * rows;
@@ -226,7 +224,20 @@ namespace IO
             }
             copiaMatriz = (double[,])Matriz.Clone();
         }
-
+        public void createIMatrix(int size) {
+            MatrizIdentidad = new double[size,size];
+            for (int i = 0; i < size; i++)
+            {
+                for (int j = 0; j < size; j++)
+                {
+                    MatrizIdentidad[i, j] = 0;
+                    if (i == j)
+                    {
+                        MatrizIdentidad[i, j] = 1;
+                    }
+                }
+            }
+        }
         private void convertirDiagonalesEnUnos(double[,] copiaMatriz, double[,] MatrizIdentidad, int x, int y)
         {
             //convertir numeros diagonales en 1
@@ -407,13 +418,14 @@ namespace IO
             int x = 0;
             int y = 0;
             int pivoteDiagonal = 0;
+
             while (true)
             {
                 if (x == y && y == pivoteDiagonal)
                 {
                     if (matrix[y, x] == 0)
                     {
-                        convertirCamposEnCeros("IniciaCero", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                        convertirCamposEnCeros("IniciaCero", ref matrix, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                     }
                     else if (matrix[y, x] == 1)
                     {
@@ -422,16 +434,16 @@ namespace IO
                     }
                     else
                     {
-                        convertirCamposEnCeros("UnoDiagonal", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                        convertirCamposEnCeros("UnoDiagonal", ref matrix, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                     }
                 }
                 else if (matrix[y, x] != 0 && y >= pivoteDiagonal && y != x)
                 {
-                    convertirCamposEnCeros("CeroArriba", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                    convertirCamposEnCeros("CeroArriba", ref matrix, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                 }
                 else if (matrix[y, x] != 0 && y <= pivoteDiagonal && y != x)
                 {
-                    convertirCamposEnCeros("CeroAbajo", ref matrix, ref matrix, ref x, ref y, ref pivoteDiagonal);
+                    convertirCamposEnCeros("CeroAbajo", ref matrix, ref MatrizIdentidad, ref x, ref y, ref pivoteDiagonal);
                 }
 
                 //avanzar por la matriz
@@ -451,7 +463,7 @@ namespace IO
                     break;
                 }
             }
-            return matrix;
+            return MatrizIdentidad;
         }
         async Task PutTaskDelay()
         {
@@ -510,6 +522,78 @@ namespace IO
                 }
             }
         }
+
+        public string drawMatrix(double[,] inMatrix)
+        {
+            int count = 0;
+            int rows = inMatrix.GetLength(1);
+            int cols = inMatrix.GetLength(0);
+            string[] vector = new string[rows * cols];
+
+            double num = 0.0;
+            Fraction fraction;
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    num = inMatrix[j, i];
+                    if (num % 1 == 0)
+                    {
+                        vector[count] = num.ToString();
+                    }
+                    else
+                    {
+                        fraction = RealToFraction(inMatrix[j, i], maxRelativeError);
+                        vector[count] = fraction.N.ToString() + "/" + fraction.D.ToString();
+                    }
+
+                    count++;
+                }
+            }
+
+            string str = "( ";
+            for (int i = 0; i < vector.Length; i++)
+            {
+                str += vector[i];
+                str += " , ";
+            }
+            str += ") ";
+
+            return str;
+        }
+
+        public string drawMatrix(double[] inMatrix)
+        {
+            int count = 0;
+            int rows = inMatrix.Length;
+            string[] vector = new string[rows];
+
+            double num = 0.0;
+            Fraction fraction;
+            for (int i = 0; i < rows; i++)
+            {
+                num = inMatrix[i];
+                if (num % 1 == 0)
+                {
+                    vector[count] = num.ToString();
+                }
+                else
+                {
+                    fraction = RealToFraction(inMatrix[i], maxRelativeError);
+                    vector[count] = fraction.N.ToString() + "/" + fraction.D.ToString();
+                }
+
+                count++;
+            }
+            string str = "( ";
+            for (int i = 0; i < vector.Length; i++) {
+                str += vector[i];
+                str += " , ";
+            }
+            str += ") ";
+            return str;
+        }
+
         public void initMatrix()
         {
             int matrixSize = Int32.Parse(filasTextBox.Text) * Int32.Parse(columnasTextBox.Text);
@@ -598,6 +682,7 @@ namespace IO
                 matrix = new double[aX, bY];
 
                 double temp = 0;
+
                 for (int i = 0; i < aX; i++)
                 {
                     for (int j = 0; j < bY; j++)
@@ -606,6 +691,44 @@ namespace IO
                         for (int k = 0; k < aY; k++)
                         {
                             temp += A[i, k] * B[k, j];
+                        }
+                        matrix[i, j] = temp;
+                    }
+                }
+            }
+            else
+            {
+                return null;
+            }
+
+            return matrix;
+        }
+        public double[,] matrixMult2(double[,] A, double[,] B)
+        {
+            double[,] matrix;
+            //para verificar que una matriz sea multiplicable A.X == B.Y ej [2,2] * [2,1] donde [y,x] filas * columnas en ese orden
+            //el resultado es una matrix de los valres restantes ej [2,2] * [2,1] la nueva matriz seria [2,1]
+            //Nota: esta matriz no se puede multiplicar B * A
+            int a = A.GetLength(1);
+            int b = B.GetLength(0);
+            if (A.GetLength(1) == B.GetLength(0))
+            {
+                int aX = A.GetLength(0);
+                int aY = A.GetLength(1);
+                int bX = B.GetLength(0);
+                int bY = B.GetLength(1);
+                matrix = new double[aX, bY];
+
+                double temp = 0;
+
+                for (int i = 0; i < aX; i++)
+                {
+                    for (int j = 0; j < bY; j++)
+                    {
+                        temp = 0;
+                        for (int k = 0; k < aY; k++)
+                        {
+                            temp += A[k, i] * B[k, j];
                         }
                         matrix[i, j] = temp;
                     }
@@ -628,6 +751,17 @@ namespace IO
             
             return matrixMult(A,matrix);
         }
+        public double[,] matrixMult2(double[,] A, double[] B)
+        {
+            double[,] matrix = new double[B.Length, 1];
+            int i = 0;
+            foreach (double value in B)
+            {
+                matrix[i++, 0] = value;
+            }
+
+            return matrixMult2(A, matrix);
+        }
         public double[,] matrixMult(double[] A, double[,] B)
         {
             double[,] matrix = new double[1, A.Length];
@@ -638,6 +772,24 @@ namespace IO
             }
 
             return matrixMult(matrix, B);
+        }
+        public double[,] matrixMult(double[] A, double[] B)
+        {
+            double[,] matrix = new double[1, A.Length];
+            int i = 0;
+            foreach (double value in A)
+            {
+                matrix[0, i++] = value;
+            }
+
+            double[,] matrix2 = new double[B.Length, 1];
+            i = 0;
+            foreach (double value in B)
+            {
+                matrix2[i++, 0] = value;
+            }
+
+            return matrixMult(matrix, matrix2);
         }
     }
 }

@@ -27,9 +27,27 @@ namespace IO
         private double[,] B;
         private double[] b;
         private double[] Cj;
+        private double[,] Yj;
+        private double[] Zj;
         //Rows Considerated
         private double[] considerations;
-        private string[] considerationsStr;
+        private double[] excludedConsiderations;
+        //
+        private int lowestRow = -1;
+        private int secondLowestRow = -1;
+        //
+        double[] cB;
+        int containedRows = 0;
+        Matrix matrix = new Matrix(0, 0);
+        double[,] Binverse;
+        double[,] xB;
+        double[,] vectorA;
+        double[,] zRara;
+        bool isMaximun;
+        double lowestValue;
+        double[] solucion;
+        int EDUARDO = 0;
+        bool donuts = false;
 
         public void init(int zSize, int restrictionsSize)
         {
@@ -48,11 +66,14 @@ namespace IO
             B = new double[this.restrictionsSize, this.restrictionsSize];
             b = new double[this.restrictionsSize];
             Cj = new double[this.zSize + this.restrictionsSize];
+            //Yj = new double[this.zSize + this.restrictionsSize];
 
             considerations = new double[this.restrictionsSize];
-            considerationsStr = new string[this.restrictionsSize];
+            excludedConsiderations = new double[this.zSize + this.restrictionsSize];
+            for (int i = 0; i < excludedConsiderations.Length; i++) {
+                excludedConsiderations[i] = -1;
+            }
         }
-
         public void Print() {
             Application.OpenForms["Form1"].Controls.Clear();
             Panel panelSimplex = new Panel();
@@ -79,12 +100,13 @@ namespace IO
             Application.OpenForms["Form1"].Controls.Add(cantidadRestriccionesTextBox);
             Application.OpenForms["Form1"].Controls.Add(functionSizeTextBox);
         }
-
         private void fillCampos() {
             int cellSize = 20;
             int pointX = cellSize;
             int pointY = cellSize;
-            int[]vec = new int[8]{ 5,3,3,5,15,5,2,10 };
+            //int[]vec = new int[8]{ 5,3,3,5,15,5,2,10 };
+            //int[]vec = new int[8]{ 2,1,3,4,6,6,1,3 };
+            int[] vec = new int[11] {1, 2, 1, 0, 5, 0, 1, 6, 1, 1, 8 };
             try
             {
                 Zstr = new string[zSize];
@@ -169,7 +191,7 @@ namespace IO
                     counterZ++;
                 }
 
-                if (textBox != null && restrictionsStr.Contains(textBox.Name) && counterR < 6)
+                if (textBox != null && restrictionsStr.Contains(textBox.Name) && counterR < restrictionsSize * (zSize + 1))
                 {
                     numeritos[counterR] = Double.Parse(textBox.Text);
                     counterR++;
@@ -329,53 +351,79 @@ namespace IO
 
             Application.OpenForms["Form1"].Controls["panelSimplex"].Controls.Add(richTextBox);
             Application.OpenForms["Form1"].Show();
-            Paso1();
+            SImplex();
         }
-
         private void calculateRows() {
             int xSize = A.GetLength(0);
             int ySize = A.GetLength(1);
             int pivote = 0;
-            for (int y = 0; y < ySize; y++)
-            {
-                for (int x = 0; x < xSize; x++)
+            
+            //buscar identidad solo si es primer paso
+            if (lowestRow == -1) {
+                for (int y = 0; y < ySize; y++)
                 {
-                    if (A[x, y] == 1)
+                    for (int x = 0; x < xSize; x++)
                     {
-                        if (y == pivote)
+                        if (A[x, y] == 1)
                         {
-                            for (int a = pivote + 1; a < ySize; a++)
+                            if (y == pivote)
                             {
-                                if (A[x, a] != 0)
-                                {
-                                    break;
+                                if (pivote == ySize - 1) {
+                                    for (int aa = pivote - 1; aa >= 0; aa--)
+                                    {
+                                        if (A[x, aa] != 0)
+                                        {
+                                            break;
+                                        }
+                                        else if (A[x, aa] == 0 && aa == 0)
+                                        {
+                                            considerations[pivote] = x;
+                                            pivote++;
+                                        }
+                                    }
                                 }
-                                else if (A[x, a] == 0 && a == ySize - 1)
+                                for (int a = pivote + 1; a < ySize; a++)
                                 {
-                                    considerations[pivote] = x;
-                                    pivote++;
+                                    if (A[x, a] != 0)
+                                    {
+                                        break;
+                                    }
+                                    else if (A[x, a] == 0 && a == ySize - 1)
+                                    {
+                                        if (pivote == 0) {
+                                            considerations[pivote] = x;
+                                            pivote++;
+                                        }
+                                        else
+                                        {
+                                            for (int aa = pivote - 1; aa >= 0; aa--)
+                                            {
+                                                if (A[x, aa] != 0)
+                                                {
+                                                    break;
+                                                }
+                                                else if (A[x, aa] == 0 && aa == 0)
+                                                {
+                                                    considerations[pivote] = x;
+                                                    pivote++;
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            for (int a = pivote - 1; a >= 0; a--)
-                            {
-                                if (A[x, a] != 0)
-                                {
-                                    break;
-                                }
-                                else if (A[x, a] == 0 && a == 0)
-                                {
-                                    considerations[pivote] = x;
-                                    pivote++;
-                                }
+                               
                             }
                         }
                     }
                 }
             }
+            int i = 0;
         }
-        private void Paso1() {
+        private void SImplex() {
             int xSize = A.GetLength(0);
             int ySize = A.GetLength(1);
+
+            Cj = zEstandar;
 
             for (int y = 0; y < ySize; y++)
             {
@@ -393,46 +441,228 @@ namespace IO
                 }
                 Console.Write("\n");
             }
-
-            //IT DOES NOT CALCULATE RANDOMLY
+            cB = new double[B.GetLength(0)];
+            Paso1();
+        }
+        private void Paso1() {
             calculateRows();
-            //
-
-            ySize = A.GetLength(1);
-            xSize = A.GetLength(0);
+            
+            int xSize = A.GetLength(0);
+            int ySize = A.GetLength(1);
 
             int xX = 0;
             int yY = 0;
-            for (int x = 0; x < xSize; x++)
+
+            if (lowestRow == -1)
             {
-                if (considerations.Contains(x))
+                for (int x = 0; x < xSize; x++)
                 {
-                    for (int y = 0; y < ySize; y++)
+                    if (considerations.Contains(x))
                     {
-                        B[xX, yY] = A[x, y];
-                        yY++;
+                        containedRows++;
+                        for (int y = 0; y < ySize; y++)
+                        {
+                            B[xX, yY] = A[x, y];
+                            yY++;
+                        }
+                        yY = 0;
+                        xX++;
                     }
-                    yY = 0;
-                    xX++;
+                }
+            }
+            EDUARDO = zEstandarSize - containedRows;
+            Paso2();
+        }
+        private void Paso2() {
+            matrix.createIMatrix(B.GetLength(0));
+            double[,] result = (double[,])B.Clone();
+            Binverse = matrix.calcularInversa(result);
+            Paso3();
+        }
+        private void Paso3() {
+            /////////////////////NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            xB = matrix.matrixMult2(Binverse, b);
+            Paso4();
+        }
+        private void Paso4()
+        {
+            for (int i = 0; i < considerations.Length; i++)
+            {
+                for (int nono = 0; nono < zEstandar.Length; nono++)
+                {
+                    if (considerations[i] == nono)
+                    {
+                        cB[i] = zEstandar[nono];
+                        break;
+                    }
                 }
             }
 
-            Matrix matrix = new Matrix(0,0);
-            double[,] Binverse = matrix.calcularInversa(B);
-            double[,] xB = matrix.matrixMult(Binverse, b);
+            //Maximo es zRara en los puntos del vector xB;
+            zRara = matrix.matrixMult(cB, xB);
 
-            double[] cB= new double[B.GetLength(0)];
-            int count = 0;
+            //SE CALCULA yJ Y Zj
+            Yj = new double[B.GetLength(0), zEstandarSize - containedRows];
+            int xDx5 = 0;
+            vectorA = new double[restrictionsSize, restrictionsSize];
+            int opCounter = 0;
+            for (int i = 0; i < Cj.Length; i++)
+            {
+                if (!considerations.Contains(i))
+                {
+                    double[] vec = new double[restrictionsSize];
+                    for (int j = 0; j < restrictionsSize; j++)
+                    {
+                        vec[j] = A[i, j];
+                        if (opCounter >= 2)
+                        {
+                            opCounter = 0;
+                        }
+                        vectorA[j, opCounter] = A[i, j];
+                    }
+                    opCounter++;
+                    double[,] m;
+                    m = matrix.matrixMult2(Binverse, vec);
 
-            foreach (double value in Cj) {
-                if (considerations.Contains(value)) {
-                    cB[count] = considerations[count++];
+                    for (int h = 0; h < m.GetLength(0); h++)
+                    {
+                        Yj[h, xDx5] = m[h, 0];
+                    }
+                    xDx5++;
                 }
             }
 
-            double[,] zRara = matrix.matrixMult(cB, xB);
+            Zj = new double[EDUARDO];
 
-            Console.Write("");
+            for (int i = 0; i < Zj.Length; i++)
+            {
+                double[] vec = new double[Yj.GetLength(0)];
+                for (int j = 0; j < Yj.GetLength(1); j++)
+                {
+                    //vec[j] = Yj[j, i];
+                    vec[j] = Yj[j, i];
+                }
+                double[,] mat;
+                mat = matrix.matrixMult(cB, vec);
+                for (int j = 0; j < Yj.GetLength(1); j++)
+                {
+                    Zj[i] = mat[0, 0];
+                }
+
+            }
+            Paso5();
+        }
+        private void Paso5()
+        {
+
+            int counter = 0;
+            //Solucion
+            solucion = new double[Zj.Length];
+            counter = 0;
+
+            for (int i = 0; i < zEstandarSize; i++)
+            {
+                if (!considerations.Contains(i))
+                {
+                    solucion[counter] = Zj[counter] - Cj[i];
+                    //  solucion[counter] = Zj[counter] - Cj[i];//
+                    counter++;
+                }
+            }
+
+            isMaximun = true;
+            lowestValue = 0;
+            for (int i = 0; i < solucion.Length; i++)
+            {
+                if (solucion[i] < 0)
+                {
+                    isMaximun = false;
+                    break;
+                }
+            }
+            if (isMaximun) { donuts = true; }
+            Paso6();
+        }
+        private void Paso6()
+        {
+            if (!isMaximun)
+            {
+                lowestValue = solucion.Min();
+                for (int x = 0; x < solucion.Length; x++)
+                {
+                    if (lowestValue == solucion[x])
+                    {
+                        //lowestValue or x is row index, posicion en Yj, lowest value = -5, x = 1
+                        lowestRow = x;
+                        double lowesValue2 = 0;
+                        double[] lowesValueVec = new double[xB.GetLength(0)];
+                        int counter2 = 0;
+                        for (int fila = 0; fila < Yj.GetLength(0); fila++)
+                        {
+                            lowesValueVec[fila] = xB[fila, 0] / Yj[counter2++, x];
+                            lowesValue2 = lowesValueVec.Min();
+                        }
+                        int counterXDf = 0;
+                        foreach (double value in lowesValueVec)
+                        {
+                            if (lowesValue2 == value)
+                            {
+                                //lowestValue or x is row index, posicion en Matrix B,lowesValue2 = 2, secondLowestRow = 1
+                                secondLowestRow = counterXDf;
+                                int lol = A.GetLength(0);
+                                
+                                int verifyYjInA = 0;
+                                for (int l = 0; l < A.GetLength(0); l++)
+                                {
+                                    verifyYjInA = 0;
+                                    for (int ll = 0; ll < A.GetLength(1); ll++)
+                                    {
+                                        if (vectorA[ll, lowestRow] == A[l, ll] && !excludedConsiderations.Contains(l))
+                                        {
+                                            verifyYjInA++;
+                                            if (verifyYjInA == A.GetLength(1))
+                                            {
+                                                //encontrado
+                                                excludedConsiderations.Append(l);
+                                                //cambiar valores de B
+                                                for (int opa = 0; opa < A.GetLength(1); opa++)
+                                                {
+                                                    B[secondLowestRow, opa] = A[l, opa];
+                                                }
+                                                considerations[secondLowestRow] = l;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (donuts) { break; }
+                                }
+
+                                Paso1();
+                                break;
+                            }
+                            counterXDf++;
+                        }
+                    }
+                    if (donuts) { break; }
+                }
+            }
+            else
+            {
+                PasoFinal();
+            }
+        }
+        private void PasoFinal()
+        {
+            if (isMaximun )
+            {
+                for (int i = 0; i < solucion.Length; i++)
+                {
+                    Console.WriteLine("Como los valores {0} son psotivios ", solucion[i]);
+                }
+                Console.WriteLine("Por tanto, z es óptima. Así la solución óptima es");
+                Console.WriteLine("z = CbXb = " + matrix.drawMatrix(cB) + "" + "*" + " " + matrix.drawMatrix(xB) + " = " + matrix.drawMatrix(zRara));
+
+            }
         }
     }
 }
